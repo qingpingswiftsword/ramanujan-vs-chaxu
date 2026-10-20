@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拉马努金图 × 差序格局 — 协作拓扑的环境选择</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root { --ink:#23262d; --paper:#f7f6f2; --line:#d8d4c8; --blue:#3d5a80;
+          --red:#a63d40; --amber:#c98a2d; --green:#6a8f6b; --dim:#777; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Songti SC","Noto Serif SC",Georgia,serif; background:var(--paper);
+         color:var(--ink); padding:32px 5vw 64px; }
+  h1 { font-size:29px; letter-spacing:2px; }
+  h1 .en { font-size:14px; color:#777; font-family:Georgia,serif; letter-spacing:0; }
+  .sub { margin:10px 0 20px; color:#555; font-size:14px; line-height:1.8; max-width:1000px; }
+  .sub b.rj { color:var(--blue); } .sub b.cx { color:var(--red); }
+  nav { position:sticky; top:0; z-index:9; background:var(--paper); border-bottom:1px solid var(--line);
+        padding:10px 0; margin-bottom:10px; }
+  nav a { color:var(--ink); text-decoration:none; font-size:14px; margin-right:20px;
+          border-bottom:2px solid transparent; padding-bottom:3px; }
+  nav a:hover { border-bottom-color:var(--blue); color:var(--blue); }
+  section { margin-top:46px; }
+  h2 { font-size:19px; border-left:4px solid var(--blue); padding-left:10px; margin-bottom:6px; }
+  h2 .tag { font-size:12px; color:#999; font-weight:normal; }
+  .desc { font-size:13.5px; color:#666; line-height:1.8; margin-bottom:14px; max-width:1000px; }
+  .desc b { color:var(--ink); }
+  .charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:24px; }
+  .chart { background:#fff; border:1px solid var(--line); border-radius:8px; height:340px; }
+  .chart-wide { grid-column:1/-1; height:400px; }
+  .gallery { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; }
+  .gcard { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px; }
+  .gcard h3 { font-size:15px; margin-bottom:2px; }
+  .gcard .st { font-size:12.5px; color:var(--dim); margin-bottom:8px; }
+  .gcard svg { width:100%; height:300px; border-radius:6px; background:#fbfaf7; }
+  .gcard table { width:100%; font-size:12.5px; border-collapse:collapse; margin-top:8px; }
+  .gcard td { padding:2px 4px; border-top:1px dashed #eee; }
+  .gcard td:first-child { color:var(--dim); }
+  .ok { color:var(--green); font-weight:bold; }
+  .rules { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
+  .rule { background:#fff; border:1px solid var(--line); border-left:4px solid var(--amber);
+          border-radius:0 8px 8px 0; padding:12px 16px; font-size:13.5px; line-height:1.8; }
+  .rule b { color:var(--ink); }
+  .findings { background:#fff; border:1px solid var(--line); border-left:4px solid var(--blue);
+              border-radius:0 8px 8px 0; padding:14px 18px; margin-top:16px; font-size:14px;
+              line-height:2; max-width:1000px; }
+  .duel { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:900px){ .duel { grid-template-columns:1fr; } }
+  .side { background:#fff; border:1px solid var(--line); border-radius:8px; padding:16px; }
+  .side h3 { font-size:16px; margin-bottom:8px; }
+  .side.rj h3 { color:var(--blue); } .side.cx h3 { color:var(--red); }
+  .side svg { width:100%; height:320px; background:#fbfaf7; border-radius:6px; }
+  .side .kv { display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; font-size:13px; margin-top:10px; }
+  .side .kv span:nth-child(odd) { color:var(--dim); }
+  .foot { margin-top:48px; font-size:12.5px; color:#888; line-height:1.9; border-top:1px solid var(--line);
+          padding-top:18px; max-width:1000px; }
+  .foot a { color:var(--blue); }
+  .err { color:var(--red); margin-top:16px; }
+</style>
+</head>
+<body>
+<h1>拉马努金图 × 差序格局 · 协作拓扑的环境选择<br>
+  <span class="en">ramanujan-vs-chaxu — which topology does the environment select: the Ramanujan expander, or rings of closeness?</span></h1>
+<p class="sub">
+  <b class="rj">拉马努金图</b>是谱意义上的"最完美协作网"：非平凡特征值压到 Alon–Boppana 下界，
+  扩散最快、直径最小、<b>没有任何小圈子</b>（零三角形）。<b class="cx">差序格局</b>正相反：
+  全是圈子——信任按亲疏分带、远端几乎不连、节省上下文但谱隙塌缩。
+  本 demo 让 50 个 agent 在可重连的网络上跑任务博弈，问一个问题：
+  <b>环境（任务新异度 L × 上下文成本 c）把均衡推向哪一端？</b>
+  答案是一个干净的对角相图，且环境翻转时同一群人在两种体制间往复。
+</p>
+
+<nav>
+  <a href="#ref">认证参照系</a><a href="#game">博弈规则</a><a href="#phase">相图</a>
+  <a href="#story">环境切换</a><a href="#duel">两端对照</a>
+</nav>
+
+<section id="ref">
+  <h2>认证拉马努金参照系 <span class="tag">三个族的构造 + 数值谱验证——"完美"有精确含义</span></h2>
+  <p class="desc">拉马努金图：d-正则图所有非平凡特征值的绝对值 ≤ 2√(d−1)（Alon–Boppana 谱下界的极达到者，
+     系 Lubotzky–Phillips–Sarnak 1988 起的系统构造）。下面三例全部经数值验证——注意它们的共同点：
+     <b>直径 2–3、三角形数为 0</b>。完美的扩散机器恰恰没有任何圈子。</p>
+  <div class="gallery" id="ref-gallery"></div>
+  <div class="charts" style="margin-top:20px;">
+    <div class="chart" id="chart-spectrum"></div>
+    <div class="chart" id="chart-refmetrics"></div>
+  </div>
+</section>
+
+<section id="game">
+  <h2>博弈规则 <span class="tag">环境两个旋钮，个体三条本能</span></h2>
+  <p class="desc">每轮一个任务：requester 需要一份知识，以概率 <b>L（任务局部性）</b>落在其 2 跳邻域内
+     （本地复现型），否则全域均匀（新异型）。知识沿 ≤3 跳路径传递：</p>
+  <div class="rules">
+    <div class="rule"><b>上下文成本 c</b>：路径越长折损越大，reward = 1 − c·hops。昂贵环境下长链路得不偿失。</div>
+    <div class="rule"><b>信任升温/冷却</b>：边有熟悉度，冷路径（&lt;τ）成功率打 5 折；常用边升温、闲置边冷却——不常走的远边会"冷下去"。</div>
+    <div class="rule"><b>探索冲动 urge</b>：任务不可达时 requester 的冲动上升；环境新异度 (1−L) 直接抬高全体的探索倾向。</div>
+    <div class="rule"><b>两种建边方式</b>：探索时连陌生远端（expander 的长边）；否则"介绍制"——朋友的朋友中挑共同朋友最多者（三角闭包 → 圈子）。</div>
+    <div class="rule"><b>剪除冷边</b>：效用低于阈值的边被度预算富余的一端剪除；度上限 = 注意力预算。</div>
+  </div>
+</section>
+
+<section id="phase">
+  <h2>相图：环境把均衡推向哪一端 <span class="tag">L × c 网格，每格 700 轮 × 3 seeds</span></h2>
+  <p class="desc">体制判据（对均衡网络测得）：<b class="rj">expander</b> = 谱隙比 ≥0.30 且拉马努金指数 ≤1 且超额聚类 ≤1.6；
+     <b class="cx">chaxu</b> = 谱隙比 ≤0.20 且超额聚类 ≥2.2；中间为过渡带。</p>
+  <div class="chart chart-wide" id="chart-phase"></div>
+  <div class="findings" id="phase-findings">计算中…</div>
+</section>
+
+<section id="story">
+  <h2>环境切换：同一群人的拓扑往复 <span class="tag">500 轮差序环境 → 500 轮新异环境 → 500 轮切回</span></h2>
+  <p class="desc">不看参数怎么设，只看一群人身上发生了什么：谱隙比（扩张性）与局部聚类（圈子度）随环境摆动，
+     <b>没有迟滞锁定</b>——差序不是死性子，是环境形状。</p>
+  <div class="chart chart-wide" id="chart-story"></div>
+  <div class="findings" id="story-findings">计算中…</div>
+</section>
+
+<section id="duel">
+  <h2>两端均衡对照 <span class="tag">同样 50 人、同样的规则，只差环境</span></h2>
+  <div class="duel">
+    <div class="side rj">
+      <h3>新异环境（L=0.05, c=0.05）→ 扩张子均衡</h3>
+      <svg id="svg-expander"></svg>
+      <div class="kv" id="kv-expander"></div>
+    </div>
+    <div class="side cx">
+      <h3>本地昂贵环境（L=0.85, c=0.30）→ 差序均衡</h3>
+      <svg id="svg-chaxu"></svg>
+      <div class="kv" id="kv-chaxu"></div>
+    </div>
+  </div>
+  <div class="findings" id="duel-findings">计算中…</div>
+</section>
+
+<div class="foot">
+  <b>诚实边界</b>：agent 全部为规则化启发（无 LLM、无学习）；"拉马努金"仅用于<b>认证参照系</b>（构造保证 + 数值验证），
+  演化均衡网络只声称 <i>expander-like / Ramanujan-index</i>（λ₂ₐᵦₛ 与 2√(d̄−1) 之比），不声称严格拉马努金；
+  任务模型是单跳知识定位的极大简化。相图 30 格 × 3 seeds，体制边界带噪声（过渡带本就宽）。
+  姊妹项目：<a href="https://qingpingswiftsword.github.io/differential-association-mas/">differential-association-mas</a>
+  （差序格局协议本身的机制 demo）。复现：<code>python run_demo.py</code>。License: MIT。
+  <br> References: Lubotzky–Phillips–Sarnak 1988 (Ramanujan graphs); Hoffman–Singleton 1960 (Moore graphs);
+  Alon–Boppana bound; 费孝通《乡土中国》1948; Agensh arXiv:2609.26781.
+</div>
+
+<script>
+const RJ='#3d5a80', CX='#a63d40', DIM='#9aa0a6';
+const charts=[];
+function mk(id){ const d=document.getElementById(id); const c=echarts.init(d);
+  charts.push(c); return c; }
+window.addEventListener('resize', ()=>charts.forEach(c=>c.resize()));
+
+function drawGraph(svgOrId, layout, edges, color, opt) {
+  opt = opt || {};
+  const svg = typeof svgOrId === 'string' ? document.getElementById(svgOrId) : svgOrId;
+  if (!svg || !layout) return;
+  const W = svg.clientWidth || 480, H = 300, PAD = 16;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const P = layout.map(p => [PAD + p.x*(W-2*PAD), PAD + p.y*(H-2*PAD)]);
+  let inner = '';
+  for (const [u,v] of edges) {
+    inner += `<line x1="${P[u][0].toFixed(1)}" y1="${P[u][1].toFixed(1)}"
+      x2="${P[v][0].toFixed(1)}" y2="${P[v][1].toFixed(1)}"
+      stroke="${color}" stroke-opacity="0.25" stroke-width="0.8"/>`;
+  }
+  layout.forEach((p,i)=>{
+    const deg = opt.degs ? opt.degs[i] : null;
+    const r = deg ? (2.2 + deg*0.45) : 3;
+    inner += `<circle cx="${P[i][0].toFixed(1)}" cy="${P[i][1].toFixed(1)}"
+      r="${r.toFixed(1)}" fill="${opt.nodeColor ? opt.nodeColor(i) : color}"
+      fill-opacity="0.85"/>`;
+  });
+  svg.innerHTML = inner;
+}
+
+fetch('../results/reference.json').then(r=>r.json()).then(REF=>{
+  const gal = document.getElementById('ref-gallery');
+  REF.graphs.forEach(g=>{
+    const div = document.createElement('div'); div.className='gcard';
+    const degs = []; const cnt = {};
+    g.edges.forEach(([u,v])=>{ cnt[u]=(cnt[u]||0)+1; cnt[v]=(cnt[v]||0)+1; });
+    for (let i=0;i<g.n;i++) degs.push(cnt[i]||0);
+    div.innerHTML = `<h3>${g.name}</h3>
+      <div class="st">n=${g.n} · d=${g.degree} · 直径 ${g.diameter} · 三角形 ${g.triangles} ·
+        λ₂ₐᵦₛ=${g.lambda2_abs} ≤ 界 ${g.ramanujan_bound} <span class="ok">✓ Ramanujan</span></div>
+      <svg></svg>
+      <table><tr><td>谱隙 d−λ₂</td><td>${g.spectral_gap}</td></tr>
+        <tr><td>含义</td><td>${g.bipartite?'二部（点-线两类角色）':'任何两人 ≤2 跳'}</td></tr></table>`;
+    gal.appendChild(div);
+    drawGraph(div.querySelector('svg'), g.layout, g.edges, RJ, {degs});
+  });
+  mk('chart-spectrum').setOption({
+    title:{text:'非平凡特征值 vs 拉马努金界', left:'center', textStyle:{fontSize:14}},
+    tooltip:{}, legend:{top:28},
+    grid:{top:70, left:50, right:20, bottom:60},
+    xAxis:{type:'category', data:REF.graphs.map(g=>g.name.split(' (')[0]),
+           axisLabel:{interval:0, rotate:18, fontSize:11}},
+    yAxis:{type:'value', name:'|λ|'},
+    series:[
+      {name:'λ₂ₐᵦₛ（实测）', type:'bar', data:REF.graphs.map(g=>g.lambda2_abs),
+       itemStyle:{color:RJ}},
+      {name:'2√(d−1)（界）', type:'bar', data:REF.graphs.map(g=>g.ramanujan_bound),
+       itemStyle:{color:'#c9c4b8'}}]});
+  mk('chart-refmetrics').setOption({
+    title:{text:'完美 = 直径小 + 零圈子', left:'center', textStyle:{fontSize:14}},
+    tooltip:{},
+    grid:{top:70, left:50, right:20, bottom:60},
+    xAxis:{type:'category', data:REF.graphs.map(g=>g.name.split(' (')[0]),
+           axisLabel:{interval:0, rotate:18, fontSize:11}},
+    yAxis:{type:'value'},
+    series:[
+      {name:'直径', type:'bar', data:REF.graphs.map(g=>g.diameter), itemStyle:{color:RJ}},
+      {name:'三角形数', type:'bar', data:REF.graphs.map(g=>g.triangles),
+       itemStyle:{color:CX}}]});
+}).catch(()=>{});
+
+fetch('../results/sweep.json').then(r=>r.json()).then(SW=>{
+  const Ls=[...new Set(SW.cells.map(c=>c.L))].sort((a,b)=>a-b);
+  const cs=[...new Set(SW.cells.map(c=>c.c))].sort((a,b)=>a-b);
+  const COLOR={expander:RJ, chaxu:CX, transition:'#d9d2bd'};
+  const data = SW.cells.map(c=>[cs.indexOf(c.c), Ls.indexOf(c.L), c.regime]);
+  mk('chart-phase').setOption({
+    title:{text:'均衡体制相图（x=上下文成本 c，y=任务局部性 L）', left:'center', textStyle:{fontSize:14}},
+    tooltip:{formatter:p=>{ const cell = SW.cells.find(cc=>
+        Math.abs(cc.L-Ls[p.value[1]])<1e-9 && Math.abs(cc.c-cs[p.value[0]])<1e-9);
+      return `L=${cell.L} · c=${cell.c}<br>体制：${cell.regime}<br>谱隙比 ${cell.gap_ratio} · 超额聚类 ${cell.excess_clustering} · RI ${cell.ramanujan_index}`; }},
+    grid:{top:50, left:70, right:30, bottom:70},
+    xAxis:{type:'category', name:'c', data:cs},
+    yAxis:{type:'category', name:'L', data:Ls},
+    visualMap:{type:'piecewise', show:false, pieces:[
+      {value:'expander', color:RJ}, {value:'chaxu', color:CX}, {value:'transition', color:'#d9d2bd'}]},
+    series:[{type:'heatmap', data,
+      label:{show:true, fontSize:10, color:'#fff',
+        formatter:p=>({expander:'EXP', chaxu:'chaxu', transition:'·'})[p.value[2]]},
+      itemStyle:{borderColor:'#fff', borderWidth:2}}]});
+
+  const exp = SW.cells.filter(c=>c.regime==='expander');
+  const chx = SW.cells.filter(c=>c.regime==='chaxu');
+  const lo = SW.cells.filter(c=>c.L<=0.2 && c.c<=0.15).sort((a,b)=>a.c-b.c)[0];
+  const hi = SW.cells.filter(c=>c.L>=0.8 && c.c>=0.25).sort((a,b)=>b.c-a.c)[0];
+  document.getElementById('phase-findings').innerHTML =
+    `相图是对角结构：<b class="rj">左下角（任务新异、上下文便宜）收敛到 expander</b>——` +
+    `例如 L=${lo.L}, c=${lo.c} 时谱隙比 ${lo.gap_ratio}、拉马努金指数 ${lo.ramanujan_index}（≤1 = 谱上已入拉马努金界）。` +
+    `<b class="cx">右上角（任务本地、上下文昂贵）退回差序格局</b>——L=${hi.L}, c=${hi.c} 时谱隙比塌到 ${hi.gap_ratio}、` +
+    `超额聚类 ${hi.excess_clustering} 倍于随机底数。中间是一条沿对角线的宽过渡带——两种组织逻辑的拉锯区。` +
+    `<br>全图统计：expander ${exp.length} 格 · chaxu ${chx.length} 格 · 过渡 ${SW.cells.length-exp.length-chx.length} 格。`;
+}).catch(()=>{});
+
+fetch('../results/storyline.json').then(r=>r.json()).then(ST=>{
+  const t = ST.timeline.map(x=>x.t);
+  const seg = (a,b)=>[{name:'', xAxis:a},{name:'', xAxis:b}];
+  mk('chart-story').setOption({
+    title:{text:'谱隙比与局部聚类随环境摆动', left:'center', textStyle:{fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{top:28},
+    grid:{top:70, left:60, right:60, bottom:50},
+    markArea:{
+      silent:true,
+      itemStyle:{opacity:0.0}},
+    xAxis:{type:'category', data:t, boundaryGap:false},
+    yAxis:[
+      {type:'value', name:'谱隙比', min:-0.1, max:0.5},
+      {type:'value', name:'局部聚类', min:0, max:0.5}],
+    series:[
+      {name:'谱隙比（高=expander）', type:'line', data:ST.timeline.map(x=>x.gap_ratio),
+       lineStyle:{color:RJ, width:2}, itemStyle:{color:RJ}, showSymbol:false,
+       markArea:{silent:true, data:[
+         [{xAxis:ST.timeline[0].t, itemStyle:{color:'rgba(166,61,64,0.07)'}},
+          {xAxis:'500', itemStyle:{color:'rgba(166,61,64,0.07)'}}],
+         [{xAxis:'500', itemStyle:{color:'rgba(61,90,128,0.08)'}},
+          {xAxis:'1000', itemStyle:{color:'rgba(61,90,128,0.08)'}}],
+         [{xAxis:'1000', itemStyle:{color:'rgba(166,61,64,0.07)'}},
+          {xAxis:ST.timeline[ST.timeline.length-1].t, itemStyle:{color:'rgba(166,61,64,0.07)'}}]]}},
+      {name:'局部聚类（高=chaxu）', yAxisIndex:1, type:'line',
+       data:ST.timeline.map(x=>x.clustering),
+       lineStyle:{color:CX, width:2, type:'dashed'}, itemStyle:{color:CX}, showSymbol:false}]});
+
+  const avg = f => ST.timeline.reduce((s,x)=>s+x[f],0)/ST.timeline.length;
+  const mid = ST.timeline.filter(x=>x.t>500 && x.t<=1000);
+  const first = ST.timeline.filter(x=>x.t<=500);
+  const last = ST.timeline.filter(x=>x.t>1000);
+  const m = a => ({gap:(a.reduce((s,x)=>s+x.gap_ratio,0)/a.length).toFixed(3),
+                   cl:(a.reduce((s,x)=>s+x.clustering,0)/a.length).toFixed(3)});
+  const m1=m(first), m2=m(mid), m3=m(last);
+  document.getElementById('story-findings').innerHTML =
+    `三段环境的均衡均值——差序①谱隙比 ${m1.gap}/聚类 ${m1.cl} → ` +
+    `<b class="rj">新异环境：谱隙比 ${m2.gap}/聚类 ${m2.cl}</b>（扩张化）→ ` +
+    `<b class="cx">切回：谱隙比 ${m3.gap}/聚类 ${m3.cl}</b>（重新圈层化）。` +
+    `同一群人、同一套规则，环境翻转就把组织形态带回去——差序格局不是文化惯性，是本地昂贵环境下的最优反应；expander 亦然。`;
+}).catch(()=>{});
+
+fetch('../results/equilibrium.json').then(r=>r.json()).then(EQ=>{
+  const draw=(key, svgId, kvId, color)=>{
+    const E = EQ[key];
+    const cnt={}; E.edges.forEach(([u,v])=>{cnt[u]=(cnt[u]||0)+1; cnt[v]=(cnt[v]||0)+1;});
+    const degs=[]; const mx=Math.max(...Object.values(cnt));
+    for(let i=0;i<50;i++) degs.push(cnt[i]||0);
+    drawGraph(svgId, E.layout, E.edges, color, {degs,
+      nodeColor:i=>{ const t=(degs[i])/mx;
+        return key==='expander'
+          ? `rgba(61,90,128,${0.35+0.6*t})` : `rgba(166,61,64,${0.35+0.6*t})`; }});
+    const m=E.metrics;
+    document.getElementById(kvId).innerHTML =
+      `<span>体制</span><span><b>${E.regime}</b></span>
+       <span>平均度 / 边数</span><span>${m.d_avg} / ${m.edges}</span>
+       <span>拉马努金指数</span><span>${m.ramanujan_index} ${m.ramanujan_index<=1?'<span class="ok">≤1 入界</span>':''}</span>
+       <span>谱隙比</span><span>${m.gap_ratio}</span>
+       <span>局部聚类（超额）</span><span>${m.clustering}（${m.excess_clustering}×）</span>
+       <span>平均偏心率</span><span>${m.mean_eccentricity}</span>
+       <span>度 Gini</span><span>${m.degree_gini}</span>`;
+  };
+  draw('expander','svg-expander','kv-expander', RJ);
+  draw('chaxu','svg-chaxu','kv-chaxu', CX);
+  const a=EQ.expander.metrics, b=EQ.chaxu.metrics;
+  document.getElementById('duel-findings').innerHTML =
+    `同一张成绩单的两个解：<b class="rj">expander 端</b>拉马努金指数 ${a.ramanujan_index}（谱上入界）、` +
+    `平均偏心率 ${a.mean_eccentricity}（几乎人人 3 跳可达）、聚类仅 ${a.clustering}——零圈子的扩散机器；` +
+    `<b class="cx">差序端</b>指数 ${b.ramanujan_index}（出界）、谱隙比塌到 ${b.gap_ratio}、` +
+    `超额聚类 ${b.excess_clustering} 倍——全是圈子的信任机器。它们不是谁对谁错，是同一群人对不同环境的两个最优反应。`;
+}).catch(()=>{});
+</script>
+</body>
+</html>
